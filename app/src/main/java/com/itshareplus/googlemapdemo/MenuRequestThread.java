@@ -85,6 +85,7 @@ public class MenuRequestThread extends Thread {
                 out.writeObject(myIp);
                 out.flush();
 
+                System.out.println("Waiting for the master to commit file ");
             }
             else if(flag==3) { // search file
 
@@ -95,9 +96,11 @@ public class MenuRequestThread extends Thread {
 
                 //read the requested file from server
                 requestedFile = (FileEntry) in.readObject();
+
+                System.out.println("Waiting for the master's response for search action ");
             }
 
-            System.out.println("Waiting for the master's response ");
+
 
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host!");

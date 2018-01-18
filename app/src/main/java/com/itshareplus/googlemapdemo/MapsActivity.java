@@ -112,26 +112,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             System.out.println("The file " + requestedFile.getFile() + " doesn't exist. We will ask Google for help...");
             //TODO find the file from the Google API
             //MapsActivity.sendReplyFromChord(fileExists);
+
+            FileEntry commitFile = null;
+
             try {
-                FileEntry commitFile = new FileEntry();
                 commitFile = new DirectionFinder(this, requestedFile.getOrigin(), requestedFile.getDestination()).execute();
-                System.out.println("File to commit is " + commitFile);
-
-
-                //commit
-                flag = 2;
-                MenuRequestThread mrt2 = new MenuRequestThread(commitFile, SERVER_PORT, flag, null);
-                mrt2.start();
-
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
+            System.out.println("File to commit is " + commitFile);
+
+            //commit
+            flag = 2;
+            MenuRequestThread mrt2 = new MenuRequestThread(commitFile, SERVER_PORT, flag, null);
+            mrt2.start();
 
 
         } else {//We have the file, no need for Google API
             //parse the file
 
-            System.out.println("The requested file is: " + requestedFile);
+            System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
 
             this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
 

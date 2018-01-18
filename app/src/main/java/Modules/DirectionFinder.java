@@ -19,10 +19,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import Chord.FileEntry;
 
-public class DirectionFinder {
+public class DirectionFinder extends FileEntry {
     private static final String DIRECTION_URL_API = "https://maps.googleapis.com/maps/api/directions/json?";
     private static final String GOOGLE_API_KEY = "AIzaSyDnwLF2-WfK8cVZt9OoDYJ9Y8kspXhEHfI";
     private DirectionFinderListener listener;
@@ -38,7 +39,14 @@ public class DirectionFinder {
     public FileEntry execute() throws UnsupportedEncodingException {
         listener.onDirectionFinderStart();
 
-        String fileData = String.valueOf(new DownloadRawData().execute(createUrl()));
+        String fileData = null;
+        try {
+            fileData = String.valueOf(new DownloadRawData().execute(createUrl()).get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
         FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
         return commitFile;
     }
