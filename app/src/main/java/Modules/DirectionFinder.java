@@ -9,6 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -19,9 +20,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Mai Thanh Hiep on 4/3/2016.
- */
+import Chord.FileEntry;
+
 public class DirectionFinder {
     private static final String DIRECTION_URL_API = "https://maps.googleapis.com/maps/api/directions/json?";
     private static final String GOOGLE_API_KEY = "AIzaSyDnwLF2-WfK8cVZt9OoDYJ9Y8kspXhEHfI";
@@ -35,9 +35,12 @@ public class DirectionFinder {
         this.destination = destination;
     }
 
-    public void execute() throws UnsupportedEncodingException {
+    public FileEntry execute() throws UnsupportedEncodingException {
         listener.onDirectionFinderStart();
-        new DownloadRawData().execute(createUrl());
+
+        String fileData = String.valueOf(new DownloadRawData().execute(createUrl()));
+        FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
+        return commitFile;
     }
 
     private String createUrl() throws UnsupportedEncodingException {
@@ -47,10 +50,10 @@ public class DirectionFinder {
         return DIRECTION_URL_API + "origin=" + urlOrigin + "&destination=" + urlDestination + "&key=" + GOOGLE_API_KEY;
     }
 
-    private class DownloadRawData extends AsyncTask<String, Void, String> {
+    public class DownloadRawData extends AsyncTask<String, Void, String> {
 
         @Override
-        protected String doInBackground(String... params) {
+        public String doInBackground(String... params) {
             String link = params[0];
             try {
                 URL url = new URL(link);

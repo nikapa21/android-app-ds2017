@@ -1,16 +1,11 @@
 package com.itshareplus.googlemapdemo;
 
-import org.json.JSONException;
-
 import Chord.FileEntry;
-import Modules.DirectionFinder;
 import Modules.DirectionFinderListener;
-import Modules.Util;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -43,14 +38,14 @@ public class MenuRequestThread extends Thread {
 
     }
 
-    public String getLocalIpAddress(){
+    public InetAddress getLocalIpAddress(){
         try {
             for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
                 NetworkInterface intf = en.nextElement();
                 for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress()) {
-                        return inetAddress.getHostAddress().toString(); } } } }
+                        return InetAddress.getByName(inetAddress.getHostAddress()); } } } }
         catch (Exception ex) {
             System.out.println("IP Address "+ ex.toString());
         }
@@ -67,12 +62,10 @@ public class MenuRequestThread extends Thread {
         try {
 
             //Create a socket to the MasterNode ip and port (7777):
-            requestSocket = new Socket("192.168.1.6", port);
+            requestSocket = new Socket("192.168.1.2", port);
             //System.out.println("menu is opening a socket to the master node's port " + port);//debug
 
-            /*InetAddress myIp = findMyIp();*/
-
-            String myIp = getLocalIpAddress();
+            InetAddress myIp = getLocalIpAddress();
             System.out.println("app has an IP " + myIp);
 
             // Get input and output streams
@@ -97,7 +90,7 @@ public class MenuRequestThread extends Thread {
 
                 out.writeObject(fileEntry);
                 out.flush();
-                out.writeObject(InetAddress.getByName(myIp));
+                out.writeObject(myIp);
                 out.flush();
 
                 //read the requested file from server
