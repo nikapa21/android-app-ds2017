@@ -87,7 +87,9 @@ public class DirectionFinder extends FileEntry {
         @Override
         protected void onPostExecute(String res) {
             try {
-                Util.parseJSon(listener, res);
+                List<String> dataFiles = new ArrayList<>();
+                dataFiles.add(res);
+                Util.parseJSon(listener, dataFiles);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
