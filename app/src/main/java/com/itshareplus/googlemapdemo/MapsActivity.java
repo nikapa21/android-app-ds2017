@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import Chord.FileEntry;
+import Chord.Pair;
 import Modules.DirectionFinder;
 import Modules.DirectionFinderListener;
 import Modules.Route;
@@ -70,7 +71,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnFindPath.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                sendMultipleHardcodedRequests();
+                //sendMultipleHardcodedRequests();
+                sendRequest();
             }
         });
 
@@ -139,6 +141,69 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    /*private void sendMultipleHardcodedGoogleRequests() {
+
+        String filename = "athens_lamia";
+        File file = new File(filename);
+
+        System.out.println("Beginning a request for athens_lamia ");
+        FileEntry fileEntry = new FileEntry(file, null, "athens", "lamia");
+
+        flag = 3;
+
+        System.out.println("Beginning Request ");
+        MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
+        mrt.start();
+
+        FileEntry requestedFile = null;
+        try {
+            requestedFile = mrt.call();
+            mrt.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        String filename2 = "lamia_ioannina";
+        File file2 = new File(filename2);
+
+        System.out.println("Beginning a request for lamia_ioannina ");
+        FileEntry fileEntry2 = new FileEntry(file2, null, "lamia", "ioannina");
+
+        flag = 3;
+
+        System.out.println("Beginning Request ");
+        MenuRequestThread mrt2 = new MenuRequestThread(fileEntry2, SERVER_PORT, flag, this);
+        mrt2.start();
+
+        FileEntry requestedFile2 = null;
+        try {
+            requestedFile2 = mrt2.call();
+            mrt2.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("The file " + requestedFile.getFile() + " doesn't exist. We will ask Google for help...");
+        //TODO find the file from the Google API
+        //MapsActivity.sendReplyFromChord(fileExists);
+
+        FileEntry commitFile = null;
+
+        try {
+            commitFile = new DirectionFinder(this, requestedFile.getOrigin(), requestedFile.getDestination()).execute();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        System.out.println("File to commit is " + commitFile);
+
+        //commit
+        flag = 2;
+        MenuRequestThread mrt3 = new MenuRequestThread(commitFile, SERVER_PORT, flag, null);
+        mrt3.start();
+
+    }*/
+
+
     private void sendRequest() {
         String origin = etOrigin.getText().toString();
         String destination = etDestination.getText().toString();
@@ -162,7 +227,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String filename = origin+"_"+destination;
         File file = new File(filename);
 
-        System.out.println("Beginning a request for athens_lamia ");
+        System.out.println("Beginning a request for " + filename);
         FileEntry fileEntry = new FileEntry(file, null, origin, destination);
 
         flag = 3;
@@ -185,19 +250,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //TODO find the file from the Google API
             //MapsActivity.sendReplyFromChord(fileExists);
 
-            FileEntry commitFile = null;
+            List<FileEntry> commitFileList = null;
 
             try {
-                commitFile = new DirectionFinder(this, requestedFile.getOrigin(), requestedFile.getDestination()).execute();
+                Pair p = new Pair(requestedFile.getOrigin(), requestedFile.getDestination());
+
+                List list = new ArrayList();
+                list.add(p);
+
+
+                commitFileList = new DirectionFinder(this, list).execute();// tha paroume mia lista apo potential commit files.
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
-            System.out.println("File to commit is " + commitFile);
+            System.out.println("Files to commit is of size " + commitFileList.size());
+            System.out.println("And the first file is " + commitFileList.get(0).getFileData());
 
             //commit
             flag = 2;
-            MenuRequestThread mrt2 = new MenuRequestThread(commitFile, SERVER_PORT, flag, null);
-            mrt2.start();
+            for(FileEntry fileEntryToCommit : commitFileList){
+                MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
+                mrt2.start();
+            }
+
 
 
         } else {//We have the file, no need for Google API
@@ -211,6 +286,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 List<String> dataFiles = new ArrayList<>();
                 dataFiles.add(requestedFile.getFileData());
+
                 Util.parseJSon(this, dataFiles);
 
             } catch (JSONException e) {

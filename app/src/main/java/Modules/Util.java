@@ -21,7 +21,7 @@ public class Util {
         List<Route> routes = new ArrayList<Route>();
 
         for(String data : dataFiles){
-
+            System.out.println("Data to be parsed " + data);
             if (data == null)
                 return;
 

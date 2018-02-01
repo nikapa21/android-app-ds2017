@@ -62,7 +62,7 @@ public class MenuRequestThread extends Thread {
         try {
 
             //Create a socket to the MasterNode ip and port (7777):
-            requestSocket = new Socket("192.168.1.15", port);
+            requestSocket = new Socket("192.168.1.12", port);
             //System.out.println("menu is opening a socket to the master node's port " + port);//debug
 
             InetAddress myIp = getLocalIpAddress();

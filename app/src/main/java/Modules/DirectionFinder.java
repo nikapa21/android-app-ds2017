@@ -22,24 +22,46 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import Chord.FileEntry;
+import Chord.Pair;
 
 public class DirectionFinder extends FileEntry {
     private static final String DIRECTION_URL_API = "https://maps.googleapis.com/maps/api/directions/json?";
     private static final String GOOGLE_API_KEY = "AIzaSyDnwLF2-WfK8cVZt9OoDYJ9Y8kspXhEHfI";
     private DirectionFinderListener listener;
-    private String origin;
-    private String destination;
 
-    public DirectionFinder(DirectionFinderListener listener, String origin, String destination) {
+    List<Pair> pairs;
+
+    public DirectionFinder(DirectionFinderListener listener, List<Pair> pairs) {
         this.listener = listener;
-        this.origin = origin;
-        this.destination = destination;
+        this.pairs = pairs;
     }
 
-    public FileEntry execute() throws UnsupportedEncodingException {
+    public List<FileEntry> execute() throws UnsupportedEncodingException {
         listener.onDirectionFinderStart();
 
-        String fileData = null;
+        List<FileEntry> resultList = new ArrayList<>();
+
+        //TODO create loop pou na kanei polla download raw data ena gia kathe pair
+        for(Pair pair: pairs) {
+            //do what execute was doing
+            String origin = pair.getOrigin();
+            String destination = pair.getDestination();
+
+            String fileData = null;
+            try {
+                fileData = new DownloadRawData().execute(createUrl(pair)).get().get(0);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+            FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
+            resultList.add(commitFile);
+        }
+
+        return resultList;
+
+        /*String fileData = null;
         try {
             fileData = String.valueOf(new DownloadRawData().execute(createUrl()).get());
         } catch (InterruptedException e) {
@@ -48,21 +70,27 @@ public class DirectionFinder extends FileEntry {
             e.printStackTrace();
         }
         FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
-        return commitFile;
+        return commitFile;*/
     }
 
-    private String createUrl() throws UnsupportedEncodingException {
-        String urlOrigin = URLEncoder.encode(origin, "utf-8");
-        String urlDestination = URLEncoder.encode(destination, "utf-8");
+
+    //tha pairnei orisma ena Pair object
+    //opote an xreiastei tha kaneis polla commit File (mesa sti loopa tis execute)
+    private String createUrl(Pair pair) throws UnsupportedEncodingException {
+        String urlOrigin = URLEncoder.encode(pair.getOrigin(), "utf-8");
+        String urlDestination = URLEncoder.encode(pair.getDestination(), "utf-8");
 
         return DIRECTION_URL_API + "origin=" + urlOrigin + "&destination=" + urlDestination + "&key=" + GOOGLE_API_KEY;
     }
 
-    public class DownloadRawData extends AsyncTask<String, Void, String> {
+    public class DownloadRawData extends AsyncTask<String, Void, List<String>> {
 
         @Override
-        public String doInBackground(String... params) {
+        public List<String> doInBackground(String... params) {
+
+            List<String> resultList = new ArrayList();
             String link = params[0];
+
             try {
                 URL url = new URL(link);
                 InputStream is = url.openConnection().getInputStream();
@@ -74,22 +102,25 @@ public class DirectionFinder extends FileEntry {
                     buffer.append(line + "\n");
                 }
 
-                return buffer.toString();
+                resultList.add(buffer.toString());
+                //return resultList;
+                is.close();
+                reader.close();
+
 
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            return null;
+            return resultList;
         }
 
         @Override
-        protected void onPostExecute(String res) {
+        protected void onPostExecute(List<String> resultList) {
             try {
-                List<String> dataFiles = new ArrayList<>();
-                dataFiles.add(res);
-                Util.parseJSon(listener, dataFiles);
+
+                Util.parseJSon(listener, resultList);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
