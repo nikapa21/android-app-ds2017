@@ -31,7 +31,9 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import Chord.FileEntry;
 import Chord.Pair;
@@ -78,221 +80,74 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    private void sendMultipleHardcodedRequests() {
+    private void sendRequest() {
 
-        String filename = "athens_lamia";
-        File file = new File(filename);
+        List<String> destinations = Arrays.asList(etDestination.getText().toString().split(","));
 
-        System.out.println("Beginning a request for athens_lamia ");
-        FileEntry fileEntry = new FileEntry(file, null, "athens", "lamia");
 
-        flag = 3;
+        List<Pair> pairNonExisting = new ArrayList<>();
+        Map<Pair, String> pairCachedDestinations = new HashMap<>();
 
-        System.out.println("Beginning Request ");
-        MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
-        mrt.start();
+        for(int i=0;i<destinations.size()-1;i++){
 
-        FileEntry requestedFile = null;
-        try {
-            requestedFile = mrt.call();
-            mrt.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            String origin = destinations.get(i);
+            String destination = destinations.get(i+1);
+            System.out.println("Initiating a separate request for a pair: " + origin + ", " + destination);
+
+            String filename = origin+"_"+destination;
+            File file = new File(filename);
+
+            Pair pair = new Pair(origin, destination);
+
+            System.out.println("Beginning a request for " + filename);
+            FileEntry fileEntry = new FileEntry(file, null, origin, destination);
+
+            flag = 3;
+
+            System.out.println("Beginning Request ");
+            MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
+            mrt.start();
+
+            FileEntry requestedFile = null;
+            try {
+                requestedFile = mrt.call();
+                mrt.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (requestedFile.getFileData() != null) {
+                //We have the file, no need for Google API
+                //parse the file
+
+                System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
+
+                //this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
+
+                pairCachedDestinations.put(pair, requestedFile.getFileData());
+                //Util.parseJSon(this, dataFiles);
+
+            } else {
+                pairNonExisting.add(pair);
+            }
         }
 
-        String filename2 = "lamia_ioannina";
-        File file2 = new File(filename2);
+//steile mia lista me non existing kai ena map me ta cched wste na ginoune ola mazi
 
-        System.out.println("Beginning a request for lamia_ioannina ");
-        FileEntry fileEntry2 = new FileEntry(file2, null, "lamia", "ioannina");
-
-        flag = 3;
-
-        System.out.println("Beginning Request ");
-        MenuRequestThread mrt2 = new MenuRequestThread(fileEntry2, SERVER_PORT, flag, this);
-        mrt2.start();
-
-        FileEntry requestedFile2 = null;
+        List<FileEntry> commitFileList = null;// tha paroume mia lista apo potential commit files.
         try {
-            requestedFile2 = mrt2.call();
-            mrt2.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        //We have the file, no need for Google API
-            //parse the file
-
-        System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile2);
-
-        this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
-
-        try {
-
-            List<String> dataFiles = new ArrayList<>();
-            dataFiles.add(requestedFile.getFileData());
-            dataFiles.add(requestedFile2.getFileData());
-            Util.parseJSon(this, dataFiles);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-
-    }
-
-    /*private void sendMultipleHardcodedGoogleRequests() {
-
-        String filename = "athens_lamia";
-        File file = new File(filename);
-
-        System.out.println("Beginning a request for athens_lamia ");
-        FileEntry fileEntry = new FileEntry(file, null, "athens", "lamia");
-
-        flag = 3;
-
-        System.out.println("Beginning Request ");
-        MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
-        mrt.start();
-
-        FileEntry requestedFile = null;
-        try {
-            requestedFile = mrt.call();
-            mrt.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        String filename2 = "lamia_ioannina";
-        File file2 = new File(filename2);
-
-        System.out.println("Beginning a request for lamia_ioannina ");
-        FileEntry fileEntry2 = new FileEntry(file2, null, "lamia", "ioannina");
-
-        flag = 3;
-
-        System.out.println("Beginning Request ");
-        MenuRequestThread mrt2 = new MenuRequestThread(fileEntry2, SERVER_PORT, flag, this);
-        mrt2.start();
-
-        FileEntry requestedFile2 = null;
-        try {
-            requestedFile2 = mrt2.call();
-            mrt2.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("The file " + requestedFile.getFile() + " doesn't exist. We will ask Google for help...");
-        //TODO find the file from the Google API
-        //MapsActivity.sendReplyFromChord(fileExists);
-
-        FileEntry commitFile = null;
-
-        try {
-            commitFile = new DirectionFinder(this, requestedFile.getOrigin(), requestedFile.getDestination()).execute();
+            commitFileList = new DirectionFinder(this, pairNonExisting, pairCachedDestinations).execute();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
-        System.out.println("File to commit is " + commitFile);
+        System.out.println("Files to commit is of size " + commitFileList.size());
+        System.out.println("And the first file is " + commitFileList.get(0).getFileData());
 
         //commit
         flag = 2;
-        MenuRequestThread mrt3 = new MenuRequestThread(commitFile, SERVER_PORT, flag, null);
-        mrt3.start();
-
-    }*/
-
-
-    private void sendRequest() {
-        String origin = etOrigin.getText().toString();
-        String destination = etDestination.getText().toString();
-
-        List<String> destinations = Arrays.asList(destination.split(","));
-
-        /*for(int i=0;i<destinations.size()-1;i++){
-            System.out.println("Initiating a separate request for a pair: " + destinations.get(i) + ", " + destinations.get(i+1));
-            // tha prepei na kanw n-1 diaforetika requestthread h edw h eksw apo ti loop
-        }*/
-
-        if (origin.isEmpty()) {
-            Toast.makeText(this, "Please enter origin address!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (destination.isEmpty()) {
-            Toast.makeText(this, "Please enter destination address!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String filename = origin+"_"+destination;
-        File file = new File(filename);
-
-        System.out.println("Beginning a request for " + filename);
-        FileEntry fileEntry = new FileEntry(file, null, origin, destination);
-
-        flag = 3;
-
-        System.out.println("Beginning Request ");
-        MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
-        mrt.start();
-
-        FileEntry requestedFile = null;
-        try {
-            requestedFile = mrt.call();
-            mrt.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        if (requestedFile.getFileData() == null) {
-
-            System.out.println("The file " + requestedFile.getFile() + " doesn't exist. We will ask Google for help...");
-            //TODO find the file from the Google API
-            //MapsActivity.sendReplyFromChord(fileExists);
-
-            List<FileEntry> commitFileList = null;
-
-            try {
-                Pair p = new Pair(requestedFile.getOrigin(), requestedFile.getDestination());
-
-                List list = new ArrayList();
-                list.add(p);
-
-
-                commitFileList = new DirectionFinder(this, list).execute();// tha paroume mia lista apo potential commit files.
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-            System.out.println("Files to commit is of size " + commitFileList.size());
-            System.out.println("And the first file is " + commitFileList.get(0).getFileData());
-
-            //commit
-            flag = 2;
-            for(FileEntry fileEntryToCommit : commitFileList){
-                MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
-                mrt2.start();
-            }
-
-
-
-        } else {//We have the file, no need for Google API
-            //parse the file
-
-            System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
-
-            this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
-
-            try {
-
-                List<String> dataFiles = new ArrayList<>();
-                dataFiles.add(requestedFile.getFileData());
-
-                Util.parseJSon(this, dataFiles);
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
+        for(FileEntry fileEntryToCommit : commitFileList){
+            MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
+            mrt2.start();
         }
 
     }

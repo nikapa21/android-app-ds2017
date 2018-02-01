@@ -2,11 +2,7 @@ package Modules;
 
 import android.os.AsyncTask;
 
-import com.google.android.gms.maps.model.LatLng;
-
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,7 +14,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import Chord.FileEntry;
@@ -28,12 +26,13 @@ public class DirectionFinder extends FileEntry {
     private static final String DIRECTION_URL_API = "https://maps.googleapis.com/maps/api/directions/json?";
     private static final String GOOGLE_API_KEY = "AIzaSyDnwLF2-WfK8cVZt9OoDYJ9Y8kspXhEHfI";
     private DirectionFinderListener listener;
+    private Map<Pair, String> pairCachedDestinations;
+    private List<Pair> nonExistingPairs;
 
-    List<Pair> pairs;
-
-    public DirectionFinder(DirectionFinderListener listener, List<Pair> pairs) {
+    public DirectionFinder(DirectionFinderListener listener, List<Pair> nonExistingPairs, Map<Pair, String> pairCachedDestinations) {
         this.listener = listener;
-        this.pairs = pairs;
+        this.nonExistingPairs = nonExistingPairs;
+        this.pairCachedDestinations = pairCachedDestinations;
     }
 
     public List<FileEntry> execute() throws UnsupportedEncodingException {
@@ -41,36 +40,26 @@ public class DirectionFinder extends FileEntry {
 
         List<FileEntry> resultList = new ArrayList<>();
 
-        //TODO create loop pou na kanei polla download raw data ena gia kathe pair
-        for(Pair pair: pairs) {
-            //do what execute was doing
-            String origin = pair.getOrigin();
-            String destination = pair.getDestination();
-
-            String fileData = null;
-            try {
-                fileData = new DownloadRawData().execute(createUrl(pair)).get().get(0);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            }
-            FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
-            resultList.add(commitFile);
-        }
-
-        return resultList;
-
-        /*String fileData = null;
+        Map<Pair, String> pairsWithFileDataToBeCommited = null;
         try {
-            fileData = String.valueOf(new DownloadRawData().execute(createUrl()).get());
+            pairsWithFileDataToBeCommited = new DownloadRawData().execute().get();
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-        FileEntry commitFile = new FileEntry(new File(origin+"_"+destination), fileData, origin, destination);
-        return commitFile;*/
+
+        for(Pair pair : pairsWithFileDataToBeCommited.keySet()){
+            String fileData = pairsWithFileDataToBeCommited.get(pair);
+            String origin = pair.getOrigin();
+            String destination = pair.getDestination();
+
+            FileEntry commitFile = new FileEntry(new File(origin + "_" + destination), fileData, origin, destination);
+            resultList.add(commitFile);
+        }
+
+        return resultList;
+
     }
 
 
@@ -83,44 +72,53 @@ public class DirectionFinder extends FileEntry {
         return DIRECTION_URL_API + "origin=" + urlOrigin + "&destination=" + urlDestination + "&key=" + GOOGLE_API_KEY;
     }
 
-    public class DownloadRawData extends AsyncTask<String, Void, List<String>> {
+    public class DownloadRawData extends AsyncTask<String, Void, Map<Pair, String>> {
 
         @Override
-        public List<String> doInBackground(String... params) {
+        public Map<Pair, String> doInBackground(String... params) {
 
-            List<String> resultList = new ArrayList();
-            String link = params[0];
+            Map<Pair, String> results = new HashMap<>();
 
-            try {
-                URL url = new URL(link);
-                InputStream is = url.openConnection().getInputStream();
-                StringBuffer buffer = new StringBuffer();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            for(Pair pair : nonExistingPairs){
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line + "\n");
+                String link = null;
+
+                try {
+                    link = createUrl(pair);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
                 }
+                try {
+                    URL url = new URL(link);
+                    InputStream is = url.openConnection().getInputStream();
+                    StringBuffer buffer = new StringBuffer();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 
-                resultList.add(buffer.toString());
-                //return resultList;
-                is.close();
-                reader.close();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        buffer.append(line + "\n");
+                    }
 
+                    results.put(pair, buffer.toString());
+                    //return resultList;
+                    is.close();
+                    reader.close();
 
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-            return resultList;
+
+            return results;
+
         }
 
         @Override
-        protected void onPostExecute(List<String> resultList) {
+        protected void onPostExecute(Map<Pair, String> resultListWithoutCached) {
             try {
-
-                Util.parseJSon(listener, resultList);
+                Util.parseJSon(listener, resultListWithoutCached, pairCachedDestinations);
             } catch (JSONException e) {
                 e.printStackTrace();
             }

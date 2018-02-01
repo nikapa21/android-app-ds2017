@@ -9,6 +9,9 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import Chord.Pair;
 
 /**
  * Created by nikos on 02/01/2018.
@@ -16,9 +19,18 @@ import java.util.List;
 
 public class Util {
 
-    public static void parseJSon(DirectionFinderListener listener, List<String> dataFiles) throws JSONException {
+    public static void parseJSon(DirectionFinderListener listener, Map<Pair, String> resultWithoutCached, Map<Pair, String> pairCachedDestinations) throws JSONException {
 
         List<Route> routes = new ArrayList<Route>();
+        List<String> dataFiles = new ArrayList<>();
+
+        if (resultWithoutCached != null){
+            dataFiles.addAll(resultWithoutCached.values());
+        }
+
+        if (pairCachedDestinations != null){
+            dataFiles.addAll(pairCachedDestinations.values());
+        }
 
         for(String data : dataFiles){
             System.out.println("Data to be parsed " + data);
