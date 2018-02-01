@@ -67,13 +67,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         btnFindPath = (Button) findViewById(R.id.btnFindPath);
-        etOrigin = (EditText) findViewById(R.id.etOrigin);
         etDestination = (EditText) findViewById(R.id.etDestination);
 
         btnFindPath.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //sendMultipleHardcodedRequests();
                 sendRequest();
             }
         });
@@ -83,7 +81,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void sendRequest() {
 
         List<String> destinations = Arrays.asList(etDestination.getText().toString().split(","));
-
 
         List<Pair> pairNonExisting = new ArrayList<>();
         Map<Pair, String> pairCachedDestinations = new HashMap<>();
@@ -140,8 +137,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+/*
         System.out.println("Files to commit is of size " + commitFileList.size());
         System.out.println("And the first file is " + commitFileList.get(0).getFileData());
+*/
 
         //commit
         flag = 2;
@@ -155,11 +154,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        LatLng athens = new LatLng(37.984338, 23.730271);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(athens, 12));
-        originMarkers.add(mMap.addMarker(new MarkerOptions()
-                .title("Athens city centre")
-                .position(athens)));
+
+        LatLng center = new LatLng(38.9, 22.43333);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, 6));
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -206,16 +203,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationMarkers = new ArrayList<>();
 
         for (Route route : routes) {
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 16));
+
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 6));
             ((TextView) findViewById(R.id.tvDuration)).setText(route.duration.text);
             ((TextView) findViewById(R.id.tvDistance)).setText(route.distance.text);
 
             originMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.start_blue))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.geo_targeting_512))
                     .title(route.startAddress)
                     .position(route.startLocation)));
             destinationMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.end_green))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.geo_targeting_512))
                     .title(route.endAddress)
                     .position(route.endLocation)));
 
