@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 
 public class Broker implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private String ipAddress;
     private int port;
     Broker broker;

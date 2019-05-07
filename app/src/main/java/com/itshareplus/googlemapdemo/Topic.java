@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class Topic implements Serializable {
+
     private String busLine;
 
     public String getBusLine() {
