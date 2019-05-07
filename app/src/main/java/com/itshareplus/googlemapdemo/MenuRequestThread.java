@@ -1,23 +1,23 @@
 package com.itshareplus.googlemapdemo;
 
-import Chord.FileEntry;
-import Modules.DirectionFinderListener;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.net.InetAddress;
 import java.util.Enumeration;
 
-public class MenuRequestThread extends Thread {
+import Chord.FileEntry;
+import Modules.DirectionFinderListener;
+
+public class MenuRequestThread extends Thread implements Serializable{
 
     FileEntry fileEntry;
     FileEntry requestedFile;
     private DirectionFinderListener listener;
-
 
     int port;
     int flag;
@@ -29,6 +29,15 @@ public class MenuRequestThread extends Thread {
         this.flag = flag;
         this.listener = listener;
 
+    }
+
+    public MenuRequestThread(int serverPort, int flag) {
+        this.port = serverPort;
+        this.flag = flag;
+    }
+
+    public MenuRequestThread(int serverPort) {
+        this.port = serverPort;
     }
 
     public FileEntry call() throws InterruptedException {
@@ -60,49 +69,35 @@ public class MenuRequestThread extends Thread {
         ObjectInputStream in = null;
 
         try {
+            requestSocket = new Socket("192.168.1.101", 7000);
 
-            //Create a socket to the MasterNode ip and port (7777):
-            requestSocket = new Socket("192.168.1.16", port);
-            //System.out.println("menu is opening a socket to the master node's port " + port);//debug
-
-            String myIp = "192.168.1.3";
-            System.out.println("app has an IP " + myIp);
-
-            // Get input and output streams
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
 
-            //First step is to send the flag to the Master - Which action we will take.
-            out.writeInt(flag);
-            out.flush();
+            int flagRegister = 2; // send flag 2 to broker 7000 in order to preRegister subscriber and receive all info about brokers and responsibilities
 
-            //TODO commit
+            try {
 
-            if(flag==2){ //commit-save file
-
-                out.writeObject(fileEntry);
-                out.flush();
-                out.writeObject(myIp);
+                out.writeInt(flagRegister);
                 out.flush();
 
-                System.out.println("Waiting for the master to commit file ");
+                String txt = (String) in.readObject();
+                System.out.println(txt);
+
+                // perimenw na mathw poioi einai oi upoloipoi brokers kai gia poia kleidia einai upeuthinoi
+                // diladi perimenw ena antikeimeno Info tis morfis {ListOfBrokers, <BrokerId, ResponsibilityLine>}
+
+                BrokerInfo brokerInfo = (BrokerInfo) in.readObject();
+                System.out.println("Received from broker brokerinfo upon preregister: " + brokerInfo);
+
+
+            } catch(Exception classNot){
+                System.err.println("data received in unknown format");
+                classNot.printStackTrace();
             }
-            else if(flag==3) { // search file
-
-                out.writeObject(fileEntry);
-                out.flush();
-                out.writeObject(myIp);
-                out.flush();
-
-                //read the requested file from server
-                requestedFile = (FileEntry) in.readObject();
-
-                System.out.println("Waiting for the master's response for search action ");
-            }
-
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host!");
-        } catch (Exception ioException) {
+        } catch (IOException ioException) {
             ioException.printStackTrace();
         } finally {
             try {

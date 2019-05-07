@@ -1,5 +1,4 @@
 package com.itshareplus.googlemapdemo;
-import com.itshareplus.googlemapdemo.HashGenerationException;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;

@@ -1,7 +1,6 @@
 package Modules;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.itshareplus.googlemapdemo.MapsActivity;
 
 import org.json.JSONArray;
 import org.json.JSONException;

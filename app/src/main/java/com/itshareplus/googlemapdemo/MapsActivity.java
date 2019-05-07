@@ -4,15 +4,13 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -25,24 +23,15 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-import org.json.JSONException;
-
-import java.io.File;
-import java.io.UnsupportedEncodingException;
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import Chord.FileEntry;
-import Chord.Pair;
-import Modules.DirectionFinder;
 import Modules.DirectionFinderListener;
 import Modules.Route;
-import Modules.Util;
+import com.itshareplus.googlemapdemo.R;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, DirectionFinderListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, DirectionFinderListener, Serializable {
 
     private GoogleMap mMap;
     private Button btnFindPath;
@@ -54,7 +43,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ProgressDialog progressDialog;
 
     int flag;
-    static final int SERVER_PORT = 7777;
+    static final int SERVER_PORT = 7000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,76 +69,129 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void sendRequest() {
 
-        List<String> destinations = Arrays.asList(etDestination.getText().toString().split(","));
+        /***** kanei prwta to PRE REGISTER ****/
 
-        List<Pair> pairNonExisting = new ArrayList<>();
-        Map<Pair, String> pairCachedDestinations = new HashMap<>();
+        MenuRequestThread mrt = new MenuRequestThread(SERVER_PORT);
+        mrt.start();
 
-        for(int i=0;i<destinations.size()-1;i++){
+//        Socket requestSocket = null;
+//        ObjectOutputStream out = null;
+//        ObjectInputStream in = null;
+//
+//        try {
+//
+//            //Create a socket to the MasterNode ip and port (7000):
+//            requestSocket = new Socket("192.168.1.101", SERVER_PORT);
+//            //System.out.println("menu is opening a socket to the master node's port " + port);//debug
+//
+//            String myIp = "192.168.1.101";
+//            System.out.println("app has an IP " + myIp);
+//
+//            // Get input and output streams
+//            out = new ObjectOutputStream(requestSocket.getOutputStream());
+//            in = new ObjectInputStream(requestSocket.getInputStream());
+//
+//            //First step is to send the flag to the Master - Which action we will take.
+//            out.writeInt(flag);
+//            out.flush();
+//
+//            if (flag == 10) { // speak with Broker 7000 and do the Pre Register
+//
+//                String txt = (String) in.readObject();
+//                brokerInfo = (BrokerInfo)in.readObject();
+//                System.out.println("Received from broker brokerinfo upon preregister: " + brokerInfo);
+//
+//                System.out.println(txt);
+//            }
+//
+//        } catch (UnknownHostException unknownHost) {
+//            System.err.println("You are trying to connect to an unknown host!");
+//        } catch (Exception ioException) {
+//            ioException.printStackTrace();
+//        } finally {
+//            try {
+//                in.close();
+//                out.close();
+//                requestSocket.close();
+//            } catch (IOException ioException) {
+//                ioException.printStackTrace();
+//            }
+//        }
 
-            String origin = destinations.get(i);
-            String destination = destinations.get(i+1);
-            System.out.println("Initiating a separate request for a pair: " + origin + ", " + destination);
 
-            String filename = origin+"_"+destination;
-            File file = new File(filename);
-
-            Pair pair = new Pair(origin, destination);
-
-            System.out.println("Beginning a request for " + filename);
-            FileEntry fileEntry = new FileEntry(file, null, origin, destination);
-
-            flag = 3;
-
-            System.out.println("Beginning Request ");
-            MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
-            mrt.start();
-
-            FileEntry requestedFile = null;
-            try {
-                requestedFile = mrt.call();
-                mrt.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            if (requestedFile.getFileData() != null) {
-                //We have the file, no need for Google API
-                //parse the file
-
-                System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
-
-                //this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
-
-                pairCachedDestinations.put(pair, requestedFile.getFileData());
-                //Util.parseJSon(this, dataFiles);
-
-            } else {
-                pairNonExisting.add(pair);
-            }
-        }
-
-//steile mia lista me non existing kai ena map me ta cched wste na ginoune ola mazi
-
-        List<FileEntry> commitFileList = null;// tha paroume mia lista apo potential commit files.
-        try {
-            commitFileList = new DirectionFinder(this, pairNonExisting, pairCachedDestinations).execute();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-/*
-        System.out.println("Files to commit is of size " + commitFileList.size());
-        System.out.println("And the first file is " + commitFileList.get(0).getFileData());
-*/
-
-        //commit
-        flag = 2;
-        for(FileEntry fileEntryToCommit : commitFileList){
-            MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
-            mrt2.start();
-        }
 
     }
+
+
+
+//        List<String> destinations = Arrays.asList(etDestination.getText().toString().split(","));
+//
+//        List<Pair> pairNonExisting = new ArrayList<>();
+//        Map<Pair, String> pairCachedDestinations = new HashMap<>();
+//
+//        for(int i=0;i<destinations.size()-1;i++){
+//
+//            String origin = destinations.get(i);
+//            String destination = destinations.get(i+1);
+//            System.out.println("Initiating a separate request for a pair: " + origin + ", " + destination);
+//
+//            String filename = origin+"_"+destination;
+//            File file = new File(filename);
+//
+//            Pair pair = new Pair(origin, destination);
+//
+//            System.out.println("Beginning a request for " + filename);
+//            FileEntry fileEntry = new FileEntry(file, null, origin, destination);
+//
+//            flag = 3;
+//
+//            System.out.println("Beginning Request ");
+//            MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
+//            mrt.start();
+//
+//            FileEntry requestedFile = null;
+//            try {
+//                requestedFile = mrt.call();
+//                mrt.join();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//
+//            if (requestedFile.getFileData() != null) {
+//                //We have the file, no need for Google API
+//                //parse the file
+//
+//                System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
+//
+//                //this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
+//
+//                pairCachedDestinations.put(pair, requestedFile.getFileData());
+//                //Util.parseJSon(this, dataFiles);
+//
+//            } else {
+//                pairNonExisting.add(pair);
+//            }
+//        }
+//
+////steile mia lista me non existing kai ena map me ta cched wste na ginoune ola mazi
+//
+//        List<FileEntry> commitFileList = null;// tha paroume mia lista apo potential commit files.
+//        try {
+//            commitFileList = new DirectionFinder(this, pairNonExisting, pairCachedDestinations).execute();
+//        } catch (UnsupportedEncodingException e) {
+//            e.printStackTrace();
+//        }
+///*
+//        System.out.println("Files to commit is of size " + commitFileList.size());
+//        System.out.println("And the first file is " + commitFileList.get(0).getFileData());
+//*/
+//
+//        //commit
+//        flag = 2;
+//        for(FileEntry fileEntryToCommit : commitFileList){
+//            MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
+//            mrt2.start();
+//        }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {

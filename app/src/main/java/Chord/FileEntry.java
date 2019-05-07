@@ -1,5 +1,8 @@
 package Chord;
 
+import com.itshareplus.googlemapdemo.Topic;
+import com.itshareplus.googlemapdemo.Value;
+
 import java.io.File;
 import java.io.Serializable;
 
@@ -9,6 +12,9 @@ public class FileEntry implements Serializable{
     String fileData;
     String origin;
     String destination;
+
+    Value value;
+    Topic topic;
 
     public FileEntry() {/*
         this.file = file;

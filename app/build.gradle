@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 'Google Inc.:Google APIs:23'
+    compileSdkVersion 28
     defaultConfig {
         applicationId "com.itshareplus.googlemapdemo"
-        minSdkVersion 16
-        targetSdkVersion 23
+        minSdkVersion 19
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
     }
@@ -15,12 +15,15 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '28.0.3'
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.2.1'
-    compile 'com.google.android.gms:play-services:8.4.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    testImplementation 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'com.google.android.gms:play-services-maps:16.1.0'
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
 }
