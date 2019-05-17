@@ -72,7 +72,7 @@ package com.itshareplus.googlemapdemo;//package com.itshareplus.googlemapdemo;
 //        etDestination = (EditText) findViewById(R.id.etDestination);
 //
 //
-//        Subscriber subscriber = new Subscriber("192.168.1.101", Integer.parseInt(args[1]));
+//        Subscriber subscriber = new Subscriber("192.168.1.22", Integer.parseInt(args[1]));
 //        Topic topic = new Topic(args[0]);
 //
 //        // kane preRegister ton subscriber
@@ -206,7 +206,7 @@ package com.itshareplus.googlemapdemo;//package com.itshareplus.googlemapdemo;
 //        ObjectInputStream in = null;
 //
 //        try {
-//            requestSocket = new Socket("192.168.1.101", 7000);
+//            requestSocket = new Socket("192.168.1.22", 7000);
 //
 //            out = new ObjectOutputStream(requestSocket.getOutputStream());
 //            in = new ObjectInputStream(requestSocket.getInputStream());

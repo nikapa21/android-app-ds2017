@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -24,7 +25,11 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.Serializable;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import Modules.DirectionFinderListener;
@@ -43,6 +48,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ProgressDialog progressDialog;
 
     int flag;
+    int SubscriberPort = 9000;
     static final int SERVER_PORT = 7000;
 
 
@@ -70,56 +76,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void sendRequest() {
 
-        /***** kanei prwta to PRE REGISTER ****/
+        Subscriber subscriber = new Subscriber("192.168.1.22", SubscriberPort++);
 
-        MenuRequestThread mrt = new MenuRequestThread(SERVER_PORT);
+
+        /*** Dwse to busline (to topic diladi) gia to opoio endiaferesai ****/
+
+        Topic topic = new Topic(etDestination.getText().toString());
+        System.out.println(topic);
+
+        /***** kane prwta to PRE REGISTER ****/
+
+        flag = 2; // send flag 2 to broker 7000 in order to preRegister subscriber and receive all info about brokers and responsibilities
+        MenuRequestThread mrt = new MenuRequestThread(SERVER_PORT, flag);
         mrt.start();
 
-//        Socket requestSocket = null;
-//        ObjectOutputStream out = null;
-//        ObjectInputStream in = null;
-//
-//        try {
-//
-//            //Create a socket to the MasterNode ip and port (7000):
-//            requestSocket = new Socket("192.168.1.101", SERVER_PORT);
-//            //System.out.println("menu is opening a socket to the master node's port " + port);//debug
-//
-//            String myIp = "192.168.1.101";
-//            System.out.println("app has an IP " + myIp);
-//
-//            // Get input and output streams
-//            out = new ObjectOutputStream(requestSocket.getOutputStream());
-//            in = new ObjectInputStream(requestSocket.getInputStream());
-//
-//            //First step is to send the flag to the Master - Which action we will take.
-//            out.writeInt(flag);
-//            out.flush();
-//
-//            if (flag == 10) { // speak with Broker 7000 and do the Pre Register
-//
-//                String txt = (String) in.readObject();
-//                brokerInfo = (BrokerInfo)in.readObject();
-//                System.out.println("Received from broker brokerinfo upon preregister: " + brokerInfo);
-//
-//                System.out.println(txt);
-//            }
-//
-//        } catch (UnknownHostException unknownHost) {
-//            System.err.println("You are trying to connect to an unknown host!");
-//        } catch (Exception ioException) {
-//            ioException.printStackTrace();
-//        } finally {
-//            try {
-//                in.close();
-//                out.close();
-//                requestSocket.close();
-//            } catch (IOException ioException) {
-//                ioException.printStackTrace();
-//            }
-//        }
+        /***** afou pires oli tin aparaititi pliroforia apo tous brokers kai gia poia kleidia einai upeuthinoi
+          zita apo sugkekrimeno broker to topic sou gia na sou epistrepsei to value kai na to optikopoihseis ****/
+
+        BrokerInfo brokerInfo = null;
+        try {
+            brokerInfo = mrt.call();
+            mrt.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        Broker myBroker = null;
+
+        for(Broker broker : brokerInfo.getListOfBrokersResponsibilityLine().keySet()) {
+            HashSet<Topic> mySet = brokerInfo.getListOfBrokersResponsibilityLine().get(broker);
+            if (mySet.contains(topic)) {
+                // an to mySet exei to topic krata to key
+                myBroker = broker;
+                break;
+            }
+        }
 
 
+        /***** kane to REGISTER ****/
+
+        flag = 3; // send with flag 3 to the responsible broker. Write out the topic and the subscriber itself in order to be registered.
+        MenuRequestThread mrt2 = new MenuRequestThread(SERVER_PORT, flag, myBroker, topic, subscriber);
+        mrt2.start();
 
     }
 
@@ -271,4 +269,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             polylinePaths.add(mMap.addPolyline(polylineOptions));
         }
     }
+
+
 }

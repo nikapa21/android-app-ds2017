@@ -6,6 +6,8 @@ import java.util.Objects;
 
 public class Subscriber implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     String addr;
     int port;
     BrokerInfo brokerInfo;
@@ -18,6 +20,10 @@ public class Subscriber implements Serializable {
 
     public Subscriber() {
 
+    }
+
+    public Subscriber(String subscriberIP) {
+        this.addr = subscriberIP;
     }
 
     @Override
@@ -34,17 +40,6 @@ public class Subscriber implements Serializable {
         return Objects.hash(addr, port);
     }
 
-    public void connect() {
-
-    }
-
-    public void disconnect() {
-
-    }
-
-    public void updateNodes() {
-
-    }
 
     public List<Broker> getBrokers() {
         return null;
