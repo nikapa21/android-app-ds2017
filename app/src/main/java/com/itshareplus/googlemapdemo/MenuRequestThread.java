@@ -13,10 +13,11 @@ import java.util.Enumeration;
 import Chord.FileEntry;
 import Modules.DirectionFinderListener;
 
-public class MenuRequestThread extends Thread implements Serializable{
+public class MenuRequestThread extends Thread {
 
+    private Message msg;
     FileEntry fileEntry;
-    FileEntry requestedFile;
+    Data data;
     private DirectionFinderListener listener;
 
     int port;
@@ -54,18 +55,44 @@ public class MenuRequestThread extends Thread implements Serializable{
         this.topic = topic;
     }
 
-    public MenuRequestThread(int serverPort, int flag, Broker myBroker, Topic topic, Subscriber subscriber) {
-        this.port = serverPort;
+    public MenuRequestThread(int flag, Broker myBroker, Topic topic, Subscriber subscriber) {
         this.flag = flag;
         this.broker = myBroker;
         this.topic = topic;
         this.subscriber = subscriber;
     }
 
+    public MenuRequestThread(int serverPort, int flag, Broker myBroker) {
+        this.port = serverPort;
+        this.flag = flag;
+        this.broker = myBroker;
+    }
+
+    public MenuRequestThread(int flag, Broker myBroker, Subscriber subscriber) {
+        this.flag = flag;
+        this.broker = myBroker;
+        this.subscriber = subscriber;
+    }
+
+    public MenuRequestThread(int flag, Broker myBroker, Topic topic, Subscriber subscriber, Message msg) {
+        this.flag = flag;
+        this.broker = myBroker;
+        this.topic = topic;
+        this.subscriber = subscriber;
+        this.msg = msg;
+    }
+
     public BrokerInfo call() throws InterruptedException {
 
         Thread.sleep(2000);
         return brokerInfo;
+
+    }
+
+    public Data callData() throws InterruptedException {
+
+        Thread.sleep(2000);
+        return data;
 
     }
 
@@ -92,7 +119,7 @@ public class MenuRequestThread extends Thread implements Serializable{
             ObjectInputStream in = null;
 
             try {
-                requestSocket = new Socket("192.168.1.22", 7000);
+                requestSocket = new Socket("192.168.1.4", 7000);
 
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
@@ -130,14 +157,17 @@ public class MenuRequestThread extends Thread implements Serializable{
             }
         }
 
-        else if (flag == 3) { /***** DO THE REGISTER *****/
+        else if (flag == 3) { /***** DO THE REGISTER AND WAIT FOR DATA *****/
 
             Socket requestSocket = null;
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
 
             try {
-                requestSocket = new Socket(broker.getIpAddress(), broker.getPort());
+                requestSocket = new Socket("192.168.1.4", broker.getPort());
+
+                String myIp = "192.168.1.4";
+                System.out.println("app has an IP " + myIp);
 
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
@@ -156,6 +186,19 @@ public class MenuRequestThread extends Thread implements Serializable{
                     out.flush();
 
                     System.out.println("Subscriber just registered!");
+
+
+                    while(true){
+
+                        Data data = (Data) in.readObject();
+                        System.out.println("Data: " + data);
+
+                        Notifier notifier = new Notifier(msg);
+                        msg.setData(data);
+                        msg.setMsg("Notification sent ");
+                        new Thread(notifier).start();
+                    }
+
 
                 } catch(Exception classNot){
                     System.err.println("data received in unknown format");
@@ -176,6 +219,5 @@ public class MenuRequestThread extends Thread implements Serializable{
             }
 
         }
-
     }
 }

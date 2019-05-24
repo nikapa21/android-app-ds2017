@@ -48,9 +48,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ProgressDialog progressDialog;
 
     int flag;
-    int SubscriberPort = 9000;
+    int SubscriberPort = 5554;
     static final int SERVER_PORT = 7000;
-
+    private Message msg = new Message(null, "mymsg");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,22 +76,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void sendRequest() {
 
-        Subscriber subscriber = new Subscriber("192.168.1.22", SubscriberPort++);
+        Subscriber subscriber = new Subscriber("192.168.1.4", SubscriberPort);
 
-
-        /*** Dwse to busline (to topic diladi) gia to opoio endiaferesai ****/
+        /*** Dwse to busline (to topic diladi) gia to opoio endiaferesai ***/
 
         Topic topic = new Topic(etDestination.getText().toString());
-        System.out.println(topic);
+        System.out.println("Sending request for bus line: " + topic);
 
-        /***** kane prwta to PRE REGISTER ****/
+        /**** kane prwta to PRE REGISTER ****/
 
         flag = 2; // send flag 2 to broker 7000 in order to preRegister subscriber and receive all info about brokers and responsibilities
         MenuRequestThread mrt = new MenuRequestThread(SERVER_PORT, flag);
         mrt.start();
 
         /***** afou pires oli tin aparaititi pliroforia apo tous brokers kai gia poia kleidia einai upeuthinoi
-          zita apo sugkekrimeno broker to topic sou gia na sou epistrepsei to value kai na to optikopoihseis ****/
+         zita apo sugkekrimeno broker to topic sou gia na sou epistrepsei to value kai na to optikopoihseis ****/
 
         BrokerInfo brokerInfo = null;
         try {
@@ -103,7 +102,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Broker myBroker = null;
 
-        for(Broker broker : brokerInfo.getListOfBrokersResponsibilityLine().keySet()) {
+        for (Broker broker : brokerInfo.getListOfBrokersResponsibilityLine().keySet()) {
             HashSet<Topic> mySet = brokerInfo.getListOfBrokersResponsibilityLine().get(broker);
             if (mySet.contains(topic)) {
                 // an to mySet exei to topic krata to key
@@ -112,92 +111,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
-
-        /***** kane to REGISTER ****/
+        /***** kane to REGISTER ANOIGONTAS ENA SOCKET KAI PARE TIN PLIROFORIA ****/
 
         flag = 3; // send with flag 3 to the responsible broker. Write out the topic and the subscriber itself in order to be registered.
-        MenuRequestThread mrt2 = new MenuRequestThread(SERVER_PORT, flag, myBroker, topic, subscriber);
+        MenuRequestThread mrt2 = new MenuRequestThread(flag, myBroker, topic, subscriber, msg);
         mrt2.start();
 
+        Waiter waiter = new Waiter(msg);
+        new Thread(waiter).start();
+
     }
-
-
-
-//        List<String> destinations = Arrays.asList(etDestination.getText().toString().split(","));
-//
-//        List<Pair> pairNonExisting = new ArrayList<>();
-//        Map<Pair, String> pairCachedDestinations = new HashMap<>();
-//
-//        for(int i=0;i<destinations.size()-1;i++){
-//
-//            String origin = destinations.get(i);
-//            String destination = destinations.get(i+1);
-//            System.out.println("Initiating a separate request for a pair: " + origin + ", " + destination);
-//
-//            String filename = origin+"_"+destination;
-//            File file = new File(filename);
-//
-//            Pair pair = new Pair(origin, destination);
-//
-//            System.out.println("Beginning a request for " + filename);
-//            FileEntry fileEntry = new FileEntry(file, null, origin, destination);
-//
-//            flag = 3;
-//
-//            System.out.println("Beginning Request ");
-//            MenuRequestThread mrt = new MenuRequestThread(fileEntry, SERVER_PORT, flag, this);
-//            mrt.start();
-//
-//            FileEntry requestedFile = null;
-//            try {
-//                requestedFile = mrt.call();
-//                mrt.join();
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//
-//            if (requestedFile.getFileData() != null) {
-//                //We have the file, no need for Google API
-//                //parse the file
-//
-//                System.out.println("We found the requested file in our memcached system. Filename: " + requestedFile);
-//
-//                //this.onDirectionFinderStart();//maybe put that just before the request on the sendRequest
-//
-//                pairCachedDestinations.put(pair, requestedFile.getFileData());
-//                //Util.parseJSon(this, dataFiles);
-//
-//            } else {
-//                pairNonExisting.add(pair);
-//            }
-//        }
-//
-////steile mia lista me non existing kai ena map me ta cched wste na ginoune ola mazi
-//
-//        List<FileEntry> commitFileList = null;// tha paroume mia lista apo potential commit files.
-//        try {
-//            commitFileList = new DirectionFinder(this, pairNonExisting, pairCachedDestinations).execute();
-//        } catch (UnsupportedEncodingException e) {
-//            e.printStackTrace();
-//        }
-///*
-//        System.out.println("Files to commit is of size " + commitFileList.size());
-//        System.out.println("And the first file is " + commitFileList.get(0).getFileData());
-//*/
-//
-//        //commit
-//        flag = 2;
-//        for(FileEntry fileEntryToCommit : commitFileList){
-//            MenuRequestThread mrt2 = new MenuRequestThread(fileEntryToCommit, SERVER_PORT, flag, null);
-//            mrt2.start();
-//        }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        LatLng center = new LatLng(38.9, 22.43333);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, 6));
+        LatLng athens = new LatLng(37.994129, 23.731960);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(athens));
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(10), 2000, null);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
