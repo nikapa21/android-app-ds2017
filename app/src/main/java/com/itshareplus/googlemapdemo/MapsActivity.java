@@ -1,18 +1,27 @@
 package com.itshareplus.googlemapdemo;
 
 import android.Manifest;
+import android.app.IntentService;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -23,47 +32,64 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.karumi.dexter.Dexter;
 
 import java.io.Serializable;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
 import Modules.DirectionFinderListener;
 import Modules.Route;
-import com.itshareplus.googlemapdemo.R;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, DirectionFinderListener, Serializable {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, Serializable {
 
     private GoogleMap mMap;
     private Button btnFindPath;
     private EditText etOrigin;
-    private EditText etDestination;
+    private EditText etTopic;
     private List<Marker> originMarkers = new ArrayList<>();
     private List<Marker> destinationMarkers = new ArrayList<>();
+
+    private ArrayList<Marker> markers = new ArrayList<>();
+    private ArrayList<LatLng> latlngs = new ArrayList<>();
+    private MarkerOptions markerOptions = new MarkerOptions();
+    Marker marker;
+
     private List<Polyline> polylinePaths = new ArrayList<>();
-    private ProgressDialog progressDialog;
+    TextView textResult;
+    ProgressBar progressBar;
+    private MyBroadcastReceiver myBroadcastReceiver;
 
     int flag;
     int SubscriberPort = 5554;
     static final int SERVER_PORT = 7000;
     private Message msg = new Message(null, "mymsg");
 
+    static MapsActivity instance;
+    LocationRequest locationRequest;
+    ;
+
+    public static MapsActivity getInstance() {
+        return instance;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_maps);
+        progressBar = (ProgressBar)findViewById(R.id.progressbar);
+
+        instance = this;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
         btnFindPath = (Button) findViewById(R.id.btnFindPath);
-        etDestination = (EditText) findViewById(R.id.etDestination);
+
+        etTopic = (EditText) findViewById(R.id.etTopic);
 
         btnFindPath.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -76,11 +102,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void sendRequest() {
 
-        Subscriber subscriber = new Subscriber("192.168.1.4", SubscriberPort);
+        Subscriber subscriber = new Subscriber("10.25.216.40", SubscriberPort);
 
         /*** Dwse to busline (to topic diladi) gia to opoio endiaferesai ***/
 
-        Topic topic = new Topic(etDestination.getText().toString());
+        Topic topic = new Topic(etTopic.getText().toString());
         System.out.println("Sending request for bus line: " + topic);
 
         /**** kane prwta to PRE REGISTER ****/
@@ -114,12 +140,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         /***** kane to REGISTER ANOIGONTAS ENA SOCKET KAI PARE TIN PLIROFORIA ****/
 
         flag = 3; // send with flag 3 to the responsible broker. Write out the topic and the subscriber itself in order to be registered.
-        MenuRequestThread mrt2 = new MenuRequestThread(flag, myBroker, topic, subscriber, msg);
-        mrt2.start();
 
-        Waiter waiter = new Waiter(msg);
-        new Thread(waiter).start();
+        Intent intentMyIntentService = new Intent(this, MyIntentService.class);
+        intentMyIntentService.putExtra(MyIntentService.EXTRA_KEY_IN, "");
+        intentMyIntentService.putExtra("flag", flag);
+        intentMyIntentService.putExtra("broker", myBroker);
+        intentMyIntentService.putExtra("topic", topic);
+        intentMyIntentService.putExtra("subscriber", subscriber);
+        //intentMyIntentService.putExtra("msg", msg);
+        startService(intentMyIntentService);
 
+        myBroadcastReceiver = new MyBroadcastReceiver();
+
+        //register BroadcastReceiver
+        IntentFilter intentFilter = new IntentFilter(MyIntentService.ACTION_MyIntentService);
+        intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
+        registerReceiver(myBroadcastReceiver, intentFilter);
+
+//        MenuRequestThread mrt2 = new MenuRequestThread(flag, myBroker, topic, subscriber, msg);
+//        mrt2.start();
+//
+//        Waiter waiter = new Waiter(msg);
+//        new Thread(waiter).start();
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        //un-register BroadcastReceiver
+        unregisterReceiver(myBroadcastReceiver);
     }
 
     @Override
@@ -128,7 +178,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         LatLng athens = new LatLng(37.994129, 23.731960);
         mMap.moveCamera(CameraUpdateFactory.newLatLng(athens));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(10), 2000, null);
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(11), 2000, null);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -143,63 +193,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
     }
 
-    @Override
-    public void onDirectionFinderStart() {
-        progressDialog = ProgressDialog.show(this, "Please wait.",
-                "Finding direction..!", true);
 
-        if (originMarkers != null) {
-            for (Marker marker : originMarkers) {
-                marker.remove();
-            }
-        }
+    public class MyBroadcastReceiver extends BroadcastReceiver {
 
-        if (destinationMarkers != null) {
-            for (Marker marker : destinationMarkers) {
-                marker.remove();
-            }
-        }
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Data data = (Data)intent.getSerializableExtra("data");
+            System.out.println("Received data from publisher :" + data);
 
-        if (polylinePaths != null) {
-            for (Polyline polyline:polylinePaths ) {
-                polyline.remove();
+            markerOptions.position(new LatLng(data.getValue().getLatitude(),data.getValue().getLongtitude()));
+            markerOptions.title(data.getTopic()+ ", " + data.getValue().getVehicleId());
+
+            if (marker == null) {
+                marker = mMap.addMarker(markerOptions);
+                marker.showInfoWindow();
+                System.out.println("Marker added" );
             }
+            else {
+                LatLng newPosition = new LatLng(data.getValue().getLatitude(),data.getValue().getLongtitude());
+                marker.setPosition(newPosition);
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(newPosition));
+
+                System.out.println("Marker updated with new Position" );
+            }
+
+
+            // to vehicle id
+
         }
     }
-
-    @Override
-    public void onDirectionFinderSuccess(List<Route> routes) {
-        progressDialog.dismiss();
-        polylinePaths = new ArrayList<>();
-        originMarkers = new ArrayList<>();
-        destinationMarkers = new ArrayList<>();
-
-        for (Route route : routes) {
-
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 6));
-            ((TextView) findViewById(R.id.tvDuration)).setText(route.duration.text);
-            ((TextView) findViewById(R.id.tvDistance)).setText(route.distance.text);
-
-            originMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.geo_targeting_512))
-                    .title(route.startAddress)
-                    .position(route.startLocation)));
-            destinationMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.geo_targeting_512))
-                    .title(route.endAddress)
-                    .position(route.endLocation)));
-
-            PolylineOptions polylineOptions = new PolylineOptions().
-                    geodesic(true).
-                    color(Color.BLUE).
-                    width(10);
-
-            for (int i = 0; i < route.points.size(); i++)
-                polylineOptions.add(route.points.get(i));
-
-            polylinePaths.add(mMap.addPolyline(polylineOptions));
-        }
-    }
-
 
 }

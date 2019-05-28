@@ -119,7 +119,7 @@ public class MenuRequestThread extends Thread {
             ObjectInputStream in = null;
 
             try {
-                requestSocket = new Socket("192.168.1.4", 7000);
+                requestSocket = new Socket("10.25.216.40", 7000);
 
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
@@ -164,9 +164,9 @@ public class MenuRequestThread extends Thread {
             ObjectInputStream in = null;
 
             try {
-                requestSocket = new Socket("192.168.1.4", broker.getPort());
+                requestSocket = new Socket("10.25.216.40", broker.getPort());
 
-                String myIp = "192.168.1.4";
+                String myIp = "10.25.216.40";
                 System.out.println("app has an IP " + myIp);
 
                 out = new ObjectOutputStream(requestSocket.getOutputStream());

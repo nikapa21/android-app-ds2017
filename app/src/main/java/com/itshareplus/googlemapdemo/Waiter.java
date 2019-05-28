@@ -1,11 +1,21 @@
 package com.itshareplus.googlemapdemo;
 
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 
 public class Waiter implements Runnable{
 
     private Message msg;
+
+    private ArrayList<Marker> markers = new ArrayList<>();
+    private ArrayList<LatLng> latlngs = new ArrayList<>();
+    private MarkerOptions markerOptions = new MarkerOptions();
 
     public Waiter(Message m){
         this.msg = m;
