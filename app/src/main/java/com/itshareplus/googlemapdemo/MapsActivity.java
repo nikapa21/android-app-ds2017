@@ -1,15 +1,11 @@
 package com.itshareplus.googlemapdemo;
 
 import android.Manifest;
-import android.app.IntentService;
-import android.app.PendingIntent;
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -17,81 +13,47 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.TextView;
-
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
-import com.karumi.dexter.Dexter;
-
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 
-import Modules.DirectionFinderListener;
-import Modules.Route;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, Serializable {
 
     private GoogleMap mMap;
-    private Button btnFindPath;
-    private EditText etOrigin;
+    private Button btnFindBusLine;
     private EditText etTopic;
-    private List<Marker> originMarkers = new ArrayList<>();
-    private List<Marker> destinationMarkers = new ArrayList<>();
 
-    private ArrayList<Marker> markers = new ArrayList<>();
-    private ArrayList<LatLng> latlngs = new ArrayList<>();
     private MarkerOptions markerOptions = new MarkerOptions();
     Marker marker;
 
-    private List<Polyline> polylinePaths = new ArrayList<>();
-    TextView textResult;
-    ProgressBar progressBar;
     private MyBroadcastReceiver myBroadcastReceiver;
 
     int flag;
     int SubscriberPort = 5554;
     static final int SERVER_PORT = 7000;
-    private Message msg = new Message(null, "mymsg");
-
-    static MapsActivity instance;
-    LocationRequest locationRequest;
-    ;
-
-    public static MapsActivity getInstance() {
-        return instance;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_maps);
-        progressBar = (ProgressBar)findViewById(R.id.progressbar);
 
-        instance = this;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        btnFindPath = (Button) findViewById(R.id.btnFindPath);
-
+        btnFindBusLine = (Button) findViewById(R.id.btnFindBusLine);
         etTopic = (EditText) findViewById(R.id.etTopic);
 
-        btnFindPath.setOnClickListener(new View.OnClickListener() {
+        btnFindBusLine.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sendRequest();
@@ -102,21 +64,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void sendRequest() {
 
-        Subscriber subscriber = new Subscriber("10.25.216.40", SubscriberPort);
+        Subscriber subscriber = new Subscriber("192.168.1.4", SubscriberPort);
 
         /*** Dwse to busline (to topic diladi) gia to opoio endiaferesai ***/
 
         Topic topic = new Topic(etTopic.getText().toString());
         System.out.println("Sending request for bus line: " + topic);
 
-        /**** kane prwta to PRE REGISTER ****/
+        /**** kane prwta to PRE REGISTER gia na pareis to brokerInfo me tin pliroforia apo tous brokers gia poia kleidia einai upeuthinoi ****/
 
         flag = 2; // send flag 2 to broker 7000 in order to preRegister subscriber and receive all info about brokers and responsibilities
         MenuRequestThread mrt = new MenuRequestThread(SERVER_PORT, flag);
         mrt.start();
 
-        /***** afou pires oli tin aparaititi pliroforia apo tous brokers kai gia poia kleidia einai upeuthinoi
-         zita apo sugkekrimeno broker to topic sou gia na sou epistrepsei to value kai na to optikopoihseis ****/
+        /***** afou pires oli tin aparaititi pliroforia zita apo sugkekrimeno broker to topic sou
+         * gia na sou epistrepsei to value kai na to optikopoihseis ****/
 
         BrokerInfo brokerInfo = null;
         try {
@@ -137,7 +99,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
-        /***** kane to REGISTER ANOIGONTAS ENA SOCKET KAI PARE TIN PLIROFORIA ****/
+        /***** kane to REGISTER ston upeuthino broker ANOIGONTAS ENA SOCKET KAI PARE TIN PLIROFORIA ****/
 
         flag = 3; // send with flag 3 to the responsible broker. Write out the topic and the subscriber itself in order to be registered.
 
@@ -147,7 +109,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         intentMyIntentService.putExtra("broker", myBroker);
         intentMyIntentService.putExtra("topic", topic);
         intentMyIntentService.putExtra("subscriber", subscriber);
-        //intentMyIntentService.putExtra("msg", msg);
         startService(intentMyIntentService);
 
         myBroadcastReceiver = new MyBroadcastReceiver();
@@ -156,13 +117,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         IntentFilter intentFilter = new IntentFilter(MyIntentService.ACTION_MyIntentService);
         intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
         registerReceiver(myBroadcastReceiver, intentFilter);
-
-//        MenuRequestThread mrt2 = new MenuRequestThread(flag, myBroker, topic, subscriber, msg);
-//        mrt2.start();
-//
-//        Waiter waiter = new Waiter(msg);
-//        new Thread(waiter).start();
-
     }
 
     @Override
@@ -193,7 +147,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
     }
 
-
     public class MyBroadcastReceiver extends BroadcastReceiver {
 
         @Override
@@ -213,14 +166,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 LatLng newPosition = new LatLng(data.getValue().getLatitude(),data.getValue().getLongtitude());
                 marker.setPosition(newPosition);
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(newPosition));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(12), 2000, null);
 
                 System.out.println("Marker updated with new Position" );
             }
-
-
-            // to vehicle id
-
         }
     }
-
 }
