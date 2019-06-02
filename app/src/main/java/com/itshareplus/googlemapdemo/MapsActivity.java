@@ -12,11 +12,13 @@ import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -167,8 +169,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     System.out.println("Add new marker based on vehicle ID incoming data");
                     markerOptions.position(point);
-                    markerOptions.title(data.getTopic() + ", " + data.getValue().getVehicleId());
+                    markerOptions.title("Line:" +data.getTopic().getBusLine() + ", Vehicle:" + data.getValue().getVehicleId());
                     marker = mMap.addMarker(markerOptions);
+                    marker.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.icons8_bus_48));
                     markers.add(marker);
                     marker.showInfoWindow();
 
@@ -187,8 +190,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 markerOptions.position(new LatLng(37.994129, 23.731960));
                 markerOptions.title(timeoutMessage);
-                marker = mMap.addMarker(markerOptions);
-                marker.showInfoWindow();
+
+                Toast.makeText(context, timeoutMessage, Toast.LENGTH_LONG).show();
             }
         }
     }

@@ -84,7 +84,7 @@ public class MyIntentService extends IntentService {
                             intentUpdate.putExtra("data", data);
                             sendBroadcast(intentUpdate);
                         } catch (SocketTimeoutException sex) {
-                            String timeoutMessage = "Timeout!";
+                            String timeoutMessage = "Timeout occurred! Did not receive any data";
                             System.out.println(timeoutMessage);
 
                             requestSocket.close();
