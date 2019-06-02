@@ -12,7 +12,7 @@ import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ProgressBar;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -21,7 +21,10 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import java.io.Serializable;
+import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Hashtable;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, Serializable {
@@ -29,10 +32,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private Button btnFindBusLine;
     private EditText etTopic;
-
     private MarkerOptions markerOptions = new MarkerOptions();
+    private ArrayList<LatLng> latlngs = new ArrayList<>();
+    private ArrayList<Marker> markers = new ArrayList<>();
+    Hashtable <String, Marker> vehicleIdMarkerTable = new Hashtable<>();
     Marker marker;
-
     private MyBroadcastReceiver myBroadcastReceiver;
 
     int flag;
@@ -59,7 +63,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 sendRequest();
             }
         });
-
     }
 
     private void sendRequest() {
@@ -151,24 +154,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Data data = (Data)intent.getSerializableExtra("data");
-            System.out.println("Received data from publisher :" + data);
+            int flag = (int) intent.getSerializableExtra("flag");
 
-            markerOptions.position(new LatLng(data.getValue().getLatitude(),data.getValue().getLongtitude()));
-            markerOptions.title(data.getTopic()+ ", " + data.getValue().getVehicleId());
+            if (flag == 0) { // Data received OK
+                Data data = (Data) intent.getSerializableExtra("data");
+                System.out.println("Received data from publisher :" + data);
 
-            if (marker == null) {
+                LatLng point = new LatLng(data.getValue().getLatitude(), data.getValue().getLongtitude());
+                latlngs.add(point);
+
+                if (!(vehicleIdMarkerTable.containsKey(data.getValue().getVehicleId()))) {
+
+                    System.out.println("Add new marker based on vehicle ID incoming data");
+                    markerOptions.position(point);
+                    markerOptions.title(data.getTopic() + ", " + data.getValue().getVehicleId());
+                    marker = mMap.addMarker(markerOptions);
+                    markers.add(marker);
+                    marker.showInfoWindow();
+
+                    vehicleIdMarkerTable.put(data.getValue().getVehicleId(), marker);
+
+                } else {
+
+                    System.out.println("update marker");
+                    Marker marker = vehicleIdMarkerTable.get(data.getValue().getVehicleId());
+                    marker.setPosition(point);
+                    marker.showInfoWindow();
+                }
+            }
+            else if (flag == 1) { // Timeout occurred
+                String timeoutMessage = (String)intent.getSerializableExtra("Timeout message");
+
+                markerOptions.position(new LatLng(37.994129, 23.731960));
+                markerOptions.title(timeoutMessage);
                 marker = mMap.addMarker(markerOptions);
                 marker.showInfoWindow();
-                System.out.println("Marker added" );
-            }
-            else {
-                LatLng newPosition = new LatLng(data.getValue().getLatitude(),data.getValue().getLongtitude());
-                marker.setPosition(newPosition);
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(newPosition));
-                mMap.animateCamera(CameraUpdateFactory.zoomTo(12), 2000, null);
-
-                System.out.println("Marker updated with new Position" );
             }
         }
     }

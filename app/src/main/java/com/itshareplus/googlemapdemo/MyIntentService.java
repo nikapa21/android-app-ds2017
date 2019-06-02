@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 public class MyIntentService extends IntentService {
@@ -21,6 +22,7 @@ public class MyIntentService extends IntentService {
     Broker myBroker;
     Topic topic;
     Subscriber subscriber;
+    private int flag2;
 
     public MyIntentService() {
         super("com.example.androidintentservice.MyIntentService");
@@ -43,7 +45,7 @@ public class MyIntentService extends IntentService {
             ObjectInputStream in = null;
 
             try {
-                requestSocket = new Socket("192.168.1.4", myBroker.getPort());
+                requestSocket = new Socket(myBroker.getIpAddress(), myBroker.getPort());
 
                 String myIp = "192.168.1.4";
                 System.out.println("app has an IP " + myIp);
@@ -64,18 +66,38 @@ public class MyIntentService extends IntentService {
                     out.writeObject(topic);
                     out.flush();
 
-                    System.out.println("Subscriber just registered!");
+                    System.out.println("Subscriber just registered! Waiting for data to visualize ");
 
                     while(true){
 
-                        Data data = (Data) in.readObject();
+                        try{
+                            requestSocket.setSoTimeout(15000); // wait for 15 seconds, if data are not received, print timeout
 
-                        //send update
-                        Intent intentUpdate = new Intent();
-                        intentUpdate.setAction(ACTION_MyIntentService);
-                        intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
-                        intentUpdate.putExtra("data", data);
-                        sendBroadcast(intentUpdate);
+                            Data data = (Data) in.readObject();
+
+                            flag2 = 0;
+                            //send update
+                            Intent intentUpdate = new Intent();
+                            intentUpdate.setAction(ACTION_MyIntentService);
+                            intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
+                            intentUpdate.putExtra("flag", flag2);
+                            intentUpdate.putExtra("data", data);
+                            sendBroadcast(intentUpdate);
+                        } catch (SocketTimeoutException sex) {
+                            String timeoutMessage = "Timeout!";
+                            System.out.println(timeoutMessage);
+
+                            requestSocket.close();
+
+                            flag2 = 1;
+                            Intent intentTimeout = new Intent();
+                            intentTimeout.setAction(ACTION_MyIntentService);
+                            intentTimeout.addCategory(Intent.CATEGORY_DEFAULT);
+                            intentTimeout.putExtra("flag", flag2);
+                            intentTimeout.putExtra("Timeout message", timeoutMessage);
+                            sendBroadcast(intentTimeout);
+                            break;
+                        }
                     }
 
 
